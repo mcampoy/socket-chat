@@ -8,7 +8,7 @@
         "start": "node server/server.js"
     },
     "author": "Matías Campoy",
-    "license": "ISC",
+    "license": "",
     "dependencies": {
         "express": "^4.16.3",
         "socket.io": "^2.0.4"

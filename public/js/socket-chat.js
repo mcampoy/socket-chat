@@ -1,24 +1,26 @@
 var socket = io();
 
-var params = new URLSearchParams( window.location.search);
-console.log(params.name);
+var params = new URLSearchParams(window.location.search);
 
-if(!params.has('name') || !params.has('room')){
-    window.location = 'index.html'
-    throw new Error('El nombre y sala son ncesarios')
+if (!params.has('nombre') || !params.has('sala')) {
+    window.location = 'index.html';
+    throw new Error('El nombre y sala son necesarios');
 }
 
-var user = {
-    name: params.get('name'),
-    room: params.get('room')
-}
+var usuario = {
+    nombre: params.get('nombre'),
+    sala: params.get('sala')
+};
+
 
 
 socket.on('connect', function() {
     console.log('Conectado al servidor');
-    socket.emit('chatIn', {user}, function(resp){
-        console.log( 'Usuarios conectados', resp);
-    })
+
+    socket.emit('entrarChat', usuario, function(resp) {
+        renderizarUsuarios(resp);
+    });
+
 });
 
 // escuchar
@@ -29,41 +31,21 @@ socket.on('disconnect', function() {
 });
 
 
-// Enviar información
-socket.emit('enviarMensaje', {
-    usuario: 'Matías',
-    mensaje: 'Hola Mundo'
-}, function(resp) {
-    console.log('respuesta server: ', resp);
-});
-
-// socket.emit('createMsg', {
-//     usuario: 'Matías',
-//     mensaje: 'Hola Mundo'
-// }, function(resp) {
-//     console.log('respuesta server: ', resp);
-// });
-
 // Escuchar información
-socket.on('createMsg', function(mensaje) {
-
-    console.log('Servidor:', mensaje);
-
+socket.on('crearMensaje', function(mensaje) {
+    renderizarMensajes(mensaje, false);
+    scrollBottom();
 });
 
-// Escuchar cuando un usuario entre o sale del chat
-
-socket.on('personList', function(users) {
-
-    console.log(users);
-
+// Escuchar cambios de usuarios
+// cuando un usuario entra o sale del chat
+socket.on('listaPersona', function(personas) {
+    renderizarUsuarios(personas);
 });
 
 // Mensajes privados
+socket.on('mensajePrivado', function(mensaje) {
 
-socket.on('privateMsg', function(msg) {
+    console.log('Mensaje Privado:', mensaje);
 
-    console.log('Mensaje Privado:', msg);
-
-
-})
+});

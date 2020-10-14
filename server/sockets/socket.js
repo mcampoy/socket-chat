@@ -1,60 +1,60 @@
 const { io } = require('../server');
-const { Users } = require('../classes/users');
-const { createMsg } = require('../utilidades/utilidades');
+const { Usuarios } = require('../classes/users');
+const { crearMensaje } = require('../utilidades/utilidades');
 
-const users = new Users();
-
-
+const usuarios = new Usuarios();
 
 io.on('connection', (client) => {
 
-    client.on('chatIn', (data, cb) => {
+    client.on('entrarChat', (data, callback) => {
 
-        console.log(data);
-        
-        if(!data.user.name || !data.user.room) {
-            return cb({
+
+        if (!data.nombre || !data.sala) {
+            return callback({
                 error: true,
-                msg: 'El nombre/sala es necesario'
-            })
+                mensaje: 'El nombre y la sala son necesarios'
+            });
         }
 
-        client.join(data.user.room)
+        client.join(data.sala);
 
-        users.addUser(client.id, data.user.name, data.user.room)
+        usuarios.agregarPersona(client.id, data.nombre, data.sala);
 
-        client.broadcast.to(data.user.room).emit('personList', users.getUsersInRoom(data.user.room))
+        client.broadcast.to(data.sala).emit('listaPersona', usuarios.getPersonasPorSala(data.sala));
+        client.broadcast.to(data.sala).emit('crearMensaje', crearMensaje('Administrador', `${ data.nombre } se unió`));
 
-        cb( users.getUsersInRoom( data.user.room) );
-        
+        callback(usuarios.getPersonasPorSala(data.sala));
+
     });
 
-    client.on('createMsg', (data) => {
+    client.on('crearMensaje', (data, callback) => {
 
-        let person = users.getUser(client.id)
+        let persona = usuarios.getPersona(client.id);
 
-        let msg = createMsg( person.name, data.msg )
+        let mensaje = crearMensaje(persona.nombre, data.mensaje);
+        client.broadcast.to(persona.sala).emit('crearMensaje', mensaje);
 
-        client.broadcast.to(person.room).emit('createMsg', msg);
-    } )
+        callback(mensaje);
+    });
 
-    client.on('disconnect', ()=> {
 
-        let personDeleted = users.deleteUser(client.id)
+    client.on('disconnect', () => {
 
-        client.broadcast.to(personDeleted.room).emit('createMsg', createMsg('Admin', `${personDeleted.name} salió`))
-        client.broadcast.to(personDeleted.room).emit('personList', users.getUsersInRoom(personDeleted.room))
-    })
+        let personaBorrada = usuarios.borrarPersona(client.id);
 
-    // Mensajes Privados
-    client.on('privateMsg', (data) => {
-        
-        let person = users.getUser(client.id)
-        console.log(person);
+        client.broadcast.to(personaBorrada.sala).emit('crearMensaje', crearMensaje('Administrador', `${ personaBorrada.nombre } salió`));
+        client.broadcast.to(personaBorrada.sala).emit('listaPersona', usuarios.getPersonasPorSala(personaBorrada.sala));
 
-        client.broadcast.to(data.para).emit('privateMsg', createMsg(person.name, data.msg))
-        console.log(person.name);
-        console.log(data.msg);
-    })
-})
+
+    });
+
+    // Mensajes privados
+    client.on('mensajePrivado', data => {
+
+        let persona = usuarios.getPersona(client.id);
+        client.broadcast.to(data.para).emit('mensajePrivado', crearMensaje(persona.nombre, data.mensaje));
+
+    });
+
+});
 
